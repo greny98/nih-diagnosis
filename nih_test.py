@@ -28,7 +28,8 @@ if __name__ == '__main__':
     test_ds = ClassifyGenerator(X_test, y_test_df.values, IMAGE_DIR, training=False, batch_size=args['batch_size'])
 
     # model
-    model = create_model(weights=args['basenet_ckpt'])
+    model = create_model()
+    model.load_weights(args["ckpt"]).expect_partial()
     model.compile(loss=FocalLoss())
 
     # Predict
