@@ -4,6 +4,8 @@ from tensorflow.keras import layers, Model, regularizers
 from tensorflow.keras.applications import densenet
 
 from nih.configs import IMAGE_SIZE, l_diseases
+from nih.model import create_nih_model
+from siim.configs import LABELS
 
 
 def load_basenet(input_shape, weights=None):
@@ -37,29 +39,13 @@ def SPPLayer():
     return layers.Lambda(spp_pool)
 
 
-def create_nih_model(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), weights=None, l2_decay=2e-5):
+def create_siim_model(ckpt=None, l2_decay=1e-5):
     spp_layer = SPPLayer()
-    base_net = load_basenet(input_shape=input_shape, weights=weights)
-    features = layers.Conv2D(256, kernel_size=3, padding='SAME')(base_net.output)
+    nih_model = create_nih_model()
+    nih_model.load_weights(ckpt).expect_partial()
+    conv_layers = [l.name for l in nih_model.layers if 'conv' in l.name]
+    features = nih_model.get_layer(conv_layers[-1]).output
     features = spp_layer(features)
-    features = layers.Dropout(0.3)(features)
-    outputs = layers.Dense(len(l_diseases), kernel_regularizer=regularizers.l2(l2_decay))(features)
-    return Model(inputs=[base_net.input], outputs=outputs)
-
-
-class FocalLoss(tf.losses.Loss):
-    def __init__(self, alpha=0.25, gamma=2.):
-        super(FocalLoss, self).__init__()
-        self._alpha = alpha
-        self._gamma = gamma
-
-    def call(self, y_true, y_pred):
-        cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=y_true, logits=y_pred
-        )
-        probs = tf.nn.sigmoid(y_pred)
-        alpha = tf.where(tf.equal(y_true, 1.0), self._alpha, (1.0 - self._alpha))
-        pt = tf.where(tf.equal(y_true, 1.0), probs, 1 - probs)
-        loss = alpha * tf.pow(1.0 - pt, self._gamma) * cross_entropy
-        loss = tf.reduce_sum(loss, axis=-1)
-        return tf.reduce_mean(loss)
+    features = layers.Dropout(0.25)(features)
+    outputs = layers.Dense(len(LABELS), kernel_regularizer=regularizers.l2(l2_decay))(features)
+    return Model(inputs=[nih_model.input], outputs=outputs)

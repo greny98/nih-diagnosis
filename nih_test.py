@@ -2,7 +2,7 @@ from tensorflow.keras.metrics import BinaryAccuracy
 import argparse
 
 from nih.data_generator import read_csv, ClassifyGenerator, l_diseases
-from nih.model import create_model, FocalLoss
+from nih.model import create_nih_model, FocalLoss
 
 
 def parse_args():
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     test_ds = ClassifyGenerator(X_test, y_test_df.values, IMAGE_DIR, training=False, batch_size=args['batch_size'])
 
     # model
-    model = create_model()
+    model = create_nih_model()
     model.load_weights(args["ckpt"]).expect_partial()
     model.compile(loss=FocalLoss())
 
@@ -39,5 +39,9 @@ if __name__ == '__main__':
         for i in range(len(accuracy)):
             accuracy[i](y_true[:, i], y_pred[:, i])
 
+    avg = 0
     for i in range(len(accuracy)):
-        print(f"- {l_diseases[i]}: {accuracy[i].result()}")
+        acc = accuracy[i].result()
+        avg += acc
+        print(f"- {l_diseases[i]}: {acc}")
+    print(f"Average: {avg / len(l_diseases)}")
