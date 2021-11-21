@@ -39,13 +39,14 @@ def SPPLayer():
     return layers.Lambda(spp_pool)
 
 
-def create_siim_model(ckpt=None, l2_decay=1e-5):
+def create_siim_model(ckpt=None):
     spp_layer = SPPLayer()
     nih_model = create_nih_model()
     nih_model.load_weights(ckpt).expect_partial()
     conv_layers = [l.name for l in nih_model.layers if 'conv' in l.name]
     features = nih_model.get_layer(conv_layers[-1]).output
     features = spp_layer(features)
+    features = layers.Dense(512, activation='relu')(features)
     features = layers.Dropout(0.25)(features)
-    outputs = layers.Dense(len(LABELS), kernel_regularizer=regularizers.l2(l2_decay))(features)
+    outputs = layers.Dense(len(LABELS), kernel_regularizer=regularizers.l2(2.5e-5))(features)
     return Model(inputs=[nih_model.input], outputs=outputs)
