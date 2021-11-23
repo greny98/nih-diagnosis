@@ -29,6 +29,7 @@ def SPPLayer():
         return tf.reshape(x, shape=(-1, ksize * ksize * c))
 
     def spp_pool(x):
+        lv6 = _pool(x, ksize=6)
         lv5 = _pool(x, ksize=5)
         lv4 = _pool(x, ksize=4)
         lv3 = _pool(x, ksize=3)
@@ -46,7 +47,8 @@ def create_siim_model(ckpt=None):
     conv_layers = [l.name for l in nih_model.layers if 'conv' in l.name]
     features = nih_model.get_layer(conv_layers[-1]).output
     features = spp_layer(features)
+    features = layers.Dropout(0.1)(features)
     features = layers.Dense(512, activation='relu')(features)
     features = layers.Dropout(0.25)(features)
-    outputs = layers.Dense(len(LABELS), kernel_regularizer=regularizers.l2(2.5e-5))(features)
+    outputs = layers.Dense(len(LABELS), kernel_regularizer=regularizers.l2(1.5e-4))(features)
     return Model(inputs=[nih_model.input], outputs=outputs)
