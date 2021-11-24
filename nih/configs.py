@@ -5,4 +5,4 @@ l_diseases = ['Cardiomegaly', 'Emphysema', 'Effusion', 'Hernia', 'Infiltration',
               'Consolidation']
 
 # Image size default
-IMAGE_SIZE = 512
+IMAGE_SIZE = 640
