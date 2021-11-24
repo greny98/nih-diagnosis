@@ -30,7 +30,7 @@ if __name__ == '__main__':
     accuracy = [BinaryAccuracy() for _ in LABELS]
     # load model
     model = create_siim_model(ckpt=args['nih_ckpt'])
-    model.load_weights(args['ckpt'])
+    model.load_weights(args['ckpt']).expect_partial()
 
     # Predict
     for images, y_true in val_ds:
