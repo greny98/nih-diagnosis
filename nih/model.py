@@ -27,6 +27,7 @@ def SPPLayer():
         return tf.reshape(x, shape=(-1, ksize * ksize * c))
 
     def spp_pool(x):
+        lv6 = _pool(x, ksize=6)
         lv5 = _pool(x, ksize=5)
         lv4 = _pool(x, ksize=4)
         lv3 = _pool(x, ksize=3)
