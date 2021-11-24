@@ -41,7 +41,7 @@ def SPPLayer():
 def create_nih_model(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), weights=None, l2_decay=2e-5):
     spp_layer = SPPLayer()
     base_net = load_basenet(input_shape=input_shape, weights=weights)
-    features = layers.Conv2D(256, kernel_size=3, padding='SAME')(base_net.output)
+    features = layers.Conv2D(128, kernel_size=3, padding='SAME')(base_net.output)
     features = spp_layer(features)
     features = layers.Dropout(0.3)(features)
     outputs = layers.Dense(len(l_diseases), kernel_regularizer=regularizers.l2(l2_decay))(features)
