@@ -24,6 +24,7 @@ def classify_augmentation(training=False):
     if training:
         transform = augment.Compose([
             augment.ImageCompression(quality_lower=80, quality_upper=100),
+            augment.SmallestMaxSize(820),
             augment.HorizontalFlip(),
             augment.VerticalFlip(),
             augment.RandomRotate90(),
@@ -31,7 +32,6 @@ def classify_augmentation(training=False):
             augment.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=30),
             augment.GaussNoise(),
             augment.GaussianBlur(),
-            augment.SmallestMaxSize(1024),
             augment.RandomSizedCrop(min_max_height=(800, 1024), height=IMAGE_SIZE, width=IMAGE_SIZE, w2h_ratio=1.),
         ])
     else:
