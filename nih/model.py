@@ -38,7 +38,7 @@ def SPPLayer():
     return layers.Lambda(spp_pool)
 
 
-def create_nih_model(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), weights=None, l2_decay=2e-5):
+def create_nih_model(input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), weights=None, l2_decay=5e-5):
     spp_layer = SPPLayer()
     base_net = load_basenet(input_shape=input_shape, weights=weights)
     features = layers.Conv2D(128, kernel_size=3, padding='SAME')(base_net.output)
