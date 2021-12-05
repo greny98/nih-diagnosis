@@ -92,8 +92,8 @@ if __name__ == '__main__':
         for step, (images, labels) in enumerate(train_ds):
             training_loss = training_steps(images, labels)
             training_loss_mean(training_loss)
-            if step % 1000 == 0:
-                print(training_loss_mean.result().numpy())
+            if (step+1) % 1000 == 0:
+                print(f"Step {step+1}:", training_loss_mean.result().numpy())
         print("Train time:", time.time() - start)
         # validate
         start = time.time()
