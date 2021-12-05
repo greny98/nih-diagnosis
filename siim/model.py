@@ -1,5 +1,5 @@
 from tensorflow.keras import layers, Model, regularizers
-from tensorflow.keras.applications import densenet
+from tensorflow.keras.applications import resnet_v2
 
 from common.spp_net import SPPLayer
 from nih.model import create_nih_model
@@ -7,7 +7,7 @@ from siim.configs import LABELS
 
 
 def load_basenet(input_shape, weights=None):
-    base_net = densenet.DenseNet201(input_shape=input_shape, include_top=False, weights='imagenet')
+    base_net = resnet_v2.ResNet101V2(input_shape=input_shape, include_top=False, weights='imagenet')
     if weights is not None:
         base_net.load_weights(weights).expect_partial()
     return base_net

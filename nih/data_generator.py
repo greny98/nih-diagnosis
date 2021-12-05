@@ -3,8 +3,7 @@ import pandas as pd
 import tensorflow as tf
 import albumentations as augment
 from skmultilearn.model_selection import iterative_train_test_split
-from nih.configs import l_diseases, IMAGE_SIZE
-from tensorflow.keras.applications import densenet
+from nih.configs import l_diseases
 
 autotune = tf.data.AUTOTUNE
 
@@ -35,35 +34,29 @@ def train_val_split(X_train_val, y_train_val, test_size=0.1, log=False):
 
 
 def classify_augmentation(training=False):
-    if training:
+    def preprocess_image(image_file):
         transform = augment.Compose([
-            augment.ImageCompression(quality_lower=90, quality_upper=100, p=0.4),
-            augment.SmallestMaxSize(720),
+            augment.ImageCompression(quality_lower=85, quality_upper=100, p=0.3),
+            augment.LongestMaxSize(512),
             augment.HorizontalFlip(),
             augment.VerticalFlip(),
             augment.RandomRotate90(),
-            augment.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3),
-            augment.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15, p=0.4),
-            augment.GaussNoise(p=0.4),
-            augment.GaussianBlur(p=0.4),
-            augment.RandomSizedCrop(min_max_height=(512, 720), height=IMAGE_SIZE, width=IMAGE_SIZE, w2h_ratio=1.)
+            augment.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1),
+            augment.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15),
         ])
-    else:
-        transform = augment.Compose([augment.Resize(IMAGE_SIZE, IMAGE_SIZE)])
-
-    def preprocess_image(image_file):
         image_raw = tf.io.read_file(image_file)
-        decoded = tf.image.decode_jpeg(image_raw, channels=3)
-        data = {'image': decoded.numpy()}
-        aug_img = transform(**data)['image']
-        aug_img = tf.cast(aug_img, tf.float32)
-        tensor = densenet.preprocess_input(aug_img)
+        image = tf.image.decode_jpeg(image_raw, channels=3)
+        data = {'image': image.numpy()}
+        if training:
+            image = transform(**data)['image']
+        image = tf.cast(image, tf.float32)
+        tensor = image / 127.5 - 1.
         return tensor
 
     return preprocess_image
 
 
-def ClassifyGenerator(images, y, image_dir, batch_size, training=False):
+def ClassifyGenerator(images, y, image_dir, training=False):
     def process_data(image_file, label):
         aug_img = tf.numpy_function(func=classify_augmentation(training), inp=[image_file], Tout=tf.float32)
         return aug_img, label
@@ -71,8 +64,7 @@ def ClassifyGenerator(images, y, image_dir, batch_size, training=False):
     images_ts = tf.data.Dataset.from_tensor_slices(image_dir + images)
     labels_ts = tf.data.Dataset.from_tensor_slices(y.astype(float))
     ds = tf.data.Dataset.zip((images_ts, labels_ts))
-    ds = ds.shuffle(128 * batch_size, reshuffle_each_iteration=training)
-    ds = ds.map(lambda x, y: process_data(x, y),
-                num_parallel_calls=autotune).batch(batch_size)
+    ds = ds.shuffle(512, reshuffle_each_iteration=training)
+    ds = ds.map(process_data, num_parallel_calls=autotune).batch(1)
     ds = ds.prefetch(autotune)
     return ds

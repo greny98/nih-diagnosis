@@ -1,7 +1,11 @@
+import os.path
+
+from nih.configs import l_diseases
 from nih.data_generator import ClassifyGenerator, read_csv, train_val_split
-from nih.model import create_nih_model, FocalLoss
-from tensorflow.keras import optimizers, callbacks
+from nih.model import create_nih_model, FocalLoss, DiagnosisModel
+from tensorflow.keras import optimizers, callbacks, metrics
 import argparse
+import tensorflow as tf
 
 
 def parse_args():
@@ -28,6 +32,8 @@ def schedule(e, lr):
 if __name__ == '__main__':
     args = parse_args()
     print(args)
+    if not os.path.exists(args['output_dir']):
+        os.makedirs(args['output_dir'])
     IMAGE_DIR = args['image_dir']
     BATCH_SIZE = args['batch_size']
     CSV_FILE = args['csv_file']
@@ -40,27 +46,53 @@ if __name__ == '__main__':
     X_train = X_train.reshape(-1)
     X_val = X_val.reshape(-1)
     # Create ds
-    train_ds = ClassifyGenerator(X_train, y_train, IMAGE_DIR, training=True, batch_size=args['batch_size'])
-    val_ds = ClassifyGenerator(X_val, y_val, IMAGE_DIR, training=False, batch_size=args['batch_size'])
+    train_ds = ClassifyGenerator(X_train, y_train, IMAGE_DIR, training=True)
+    val_ds = ClassifyGenerator(X_val, y_val, IMAGE_DIR, training=False)
 
     # Config model
-    model = create_nih_model(weights=args['basenet_ckpt'])
-    model.compile(loss=FocalLoss(), optimizer=optimizers.Adam(learning_rate=args['lr']))
-    # Model checkpoints
-    ckpt_cb = callbacks.ModelCheckpoint(
-        filepath=f"{args['output_dir']}/checkpoint",
-        save_best_only=True,
-        save_weights_only=True,
-        monitor='val_loss',
-        mode='min'
-    )
-    lr_schedule_cb = callbacks.LearningRateScheduler(schedule)
-    # Tensorboard
-    tensorboard_cb = callbacks.TensorBoard(log_dir=args['log_dir'])
-    # Fit
-    model.fit(
-        train_ds,
-        validation_data=val_ds,
-        epochs=args['epochs'],
-        callbacks=[ckpt_cb, lr_schedule_cb, tensorboard_cb]
-    )
+    model = DiagnosisModel(len(l_diseases))
+
+
+    def training_steps(x, y_true):
+        with tf.GradientTape() as tape:
+            y_pred = model(x, training=True)
+            y_true = tf.cast(y_true, dtype=tf.float32)
+            loss_val = loss_fn(y_true, y_pred)
+        grads = tape.gradient(loss_val, model.trainable_weights)
+        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+        return loss_val
+
+
+    def validate_steps(x, y_true):
+        y_pred = model(x, training=False)
+        y_true = tf.cast(y_true, dtype=tf.float32)
+        return loss_fn(y_true, y_pred)
+
+
+    loss_fn = FocalLoss()
+    training_loss_mean = metrics.Mean(name="loss")
+    validate_loss_mean = metrics.Mean(name="val_loss")
+
+    optimizer = optimizers.Adam(learning_rate=args['lr'])
+    epochs = 2
+
+    best_val_loss = None
+    for e in range(epochs):
+        # reset metrics state
+        training_loss_mean.reset_states()
+        validate_loss_mean.reset_states()
+        # training
+        for step, (images, labels) in enumerate(train_ds):
+            training_loss = training_steps(images, labels)
+            training_loss_mean(training_loss)
+
+        # validate
+        for step, (images, labels) in enumerate(val_ds):
+            val_loss = validate_steps(images, labels)
+            validate_loss_mean(val_loss)
+
+        if (best_val_loss is None) or (validate_loss_mean.result().numpy() < best_val_loss):
+            model.save_weights(f"{args['output_dir']}/checkpoint")
+        print(f"Epoch {e}:")
+        print("\t- Training Loss =", training_loss_mean.result().numpy())
+        print("\t- Validation Loss =", validate_loss_mean.result().numpy())
