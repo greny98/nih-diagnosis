@@ -43,6 +43,7 @@ def classify_augmentation(training=False):
             augment.RandomRotate90(),
             augment.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1),
             augment.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15),
+            augment.RandomSizedCrop(min_max_height=(400, 480), height=512, width=512, p=0.5)
         ])
         image_raw = tf.io.read_file(image_file)
         image = tf.image.decode_jpeg(image_raw, channels=3)

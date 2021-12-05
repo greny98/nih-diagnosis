@@ -1,4 +1,5 @@
 import os.path
+import time
 
 from nih.configs import l_diseases
 from nih.data_generator import ClassifyGenerator, read_csv, train_val_split
@@ -6,6 +7,7 @@ from nih.model import FocalLoss, DiagnosisModel
 from tensorflow.keras import optimizers, metrics
 import argparse
 import tensorflow as tf
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -76,6 +78,8 @@ if __name__ == '__main__':
     lr = args['lr']
     decay_lr = 0.95
     best_val_loss = None
+    print("Total Train: ", len(train_ds))
+    print("Total Val: ", len(val_ds))
     for e in range(epochs):
         if e > 5 and e % 4 == 0:
             lr = lr * decay_lr
@@ -84,15 +88,19 @@ if __name__ == '__main__':
         training_loss_mean.reset_states()
         validate_loss_mean.reset_states()
         # training
+        start = time.time()
         for step, (images, labels) in enumerate(train_ds):
             training_loss = training_steps(images, labels)
             training_loss_mean(training_loss)
-
+            if step % 1000 == 0:
+                print(training_loss_mean.result().numpy())
+        print("Train time:", time.time() - start)
         # validate
+        start = time.time()
         for step, (images, labels) in enumerate(val_ds):
             val_loss = validate_steps(images, labels)
             validate_loss_mean(val_loss)
-
+        print("Val time:", time.time() - start)
         if (best_val_loss is None) or (validate_loss_mean.result().numpy() < best_val_loss):
             model.save_weights(f"{args['output_dir']}/checkpoint")
         print(f"Epoch {e}:")
