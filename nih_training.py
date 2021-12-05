@@ -7,7 +7,6 @@ from tensorflow.keras import optimizers, metrics
 import argparse
 import tensorflow as tf
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=12)
