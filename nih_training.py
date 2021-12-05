@@ -2,8 +2,8 @@ import os.path
 
 from nih.configs import l_diseases
 from nih.data_generator import ClassifyGenerator, read_csv, train_val_split
-from nih.model import create_nih_model, FocalLoss, DiagnosisModel
-from tensorflow.keras import optimizers, callbacks, metrics
+from nih.model import FocalLoss, DiagnosisModel
+from tensorflow.keras import optimizers, metrics
 import argparse
 import tensorflow as tf
 
@@ -73,11 +73,14 @@ if __name__ == '__main__':
     training_loss_mean = metrics.Mean(name="loss")
     validate_loss_mean = metrics.Mean(name="val_loss")
 
-    optimizer = optimizers.Adam(learning_rate=args['lr'])
-    epochs = 2
-
+    epochs = args["epochs"]
+    lr = args['lr']
+    decay_lr = 0.95
     best_val_loss = None
     for e in range(epochs):
+        if e > 5 and e % 4 == 0:
+            lr = lr * decay_lr
+        optimizer = optimizers.Adam(learning_rate=lr)
         # reset metrics state
         training_loss_mean.reset_states()
         validate_loss_mean.reset_states()
