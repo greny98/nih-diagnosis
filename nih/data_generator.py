@@ -57,7 +57,7 @@ def classify_augmentation(training=False):
     return preprocess_image
 
 
-def ClassifyGenerator(images, y, image_dir, training=False):
+def ClassifyGenerator(images, y, image_dir, batch_size, training=False):
     def process_data(image_file, label):
         aug_img = tf.numpy_function(func=classify_augmentation(training), inp=[image_file], Tout=tf.float32)
         return aug_img, label
@@ -66,6 +66,6 @@ def ClassifyGenerator(images, y, image_dir, training=False):
     labels_ts = tf.data.Dataset.from_tensor_slices(y.astype(float))
     ds = tf.data.Dataset.zip((images_ts, labels_ts))
     ds = ds.shuffle(512, reshuffle_each_iteration=training)
-    ds = ds.map(process_data, num_parallel_calls=autotune).batch(1)
+    ds = ds.map(process_data, num_parallel_calls=autotune).batch(batch_size)
     ds = ds.prefetch(autotune)
     return ds

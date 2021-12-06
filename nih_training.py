@@ -11,7 +11,7 @@ import tensorflow as tf
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=12)
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--csv_file', type=str, default='data/nih/train_val.csv')
     parser.add_argument('--image_dir', type=str, default='data/nih/images/')
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     X_train = X_train.reshape(-1)
     X_val = X_val.reshape(-1)
     # Create ds
-    train_ds = ClassifyGenerator(X_train, y_train, IMAGE_DIR, training=True)
-    val_ds = ClassifyGenerator(X_val, y_val, IMAGE_DIR, training=False)
+    train_ds = ClassifyGenerator(X_train, y_train, IMAGE_DIR, batch_size=args["batch_size"], training=True)
+    val_ds = ClassifyGenerator(X_val, y_val, IMAGE_DIR, batch_size=args["batch_size"], training=False)
 
     # Config model
     model = DiagnosisModel(len(l_diseases))
@@ -90,10 +90,12 @@ if __name__ == '__main__':
         # training
         start = time.time()
         for step, (images, labels) in enumerate(train_ds):
-            training_loss = training_steps(images, labels)
+            width, height = tf.random.uniform(shape=(2,), minval=480, maxval=640, dtype=tf.int32).numpy()
+            images_random_size = tf.image.resize(images, size=(width, height))
+            training_loss = training_steps(images_random_size, labels)
             training_loss_mean(training_loss)
-            if (step+1) % 1000 == 0:
-                print(f"Step {step+1}:", training_loss_mean.result().numpy())
+            if step % 5000 == 0:
+                print(f"Step {step + 1}:", training_loss_mean.result().numpy())
         print("Train time:", time.time() - start)
         # validate
         start = time.time()
