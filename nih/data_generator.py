@@ -35,21 +35,24 @@ def train_val_split(X_train_val, y_train_val, test_size=0.1, log=False):
 
 def classify_augmentation(training=False):
     def preprocess_image(image_file):
-        transform = augment.Compose([
-            augment.ImageCompression(quality_lower=85, quality_upper=100, p=0.3),
-            augment.LongestMaxSize(512),
-            augment.HorizontalFlip(),
-            augment.VerticalFlip(),
-            augment.RandomRotate90(),
-            augment.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1),
-            augment.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15),
-            augment.RandomSizedCrop(min_max_height=(400, 480), height=512, width=512, p=0.5)
-        ])
+        if training:
+            transform = augment.Compose([
+                augment.ImageCompression(quality_lower=85, quality_upper=100, p=0.3),
+                augment.LongestMaxSize(640),
+                augment.HorizontalFlip(),
+                augment.VerticalFlip(),
+                augment.RandomRotate90(),
+                augment.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1),
+                augment.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.05, rotate_limit=15),
+                augment.RandomSizedCrop(min_max_height=(480, 600), height=512, width=512, p=0.5),
+                augment.Resize(512, 512)
+            ])
+        else:
+            transform = augment.Compose([augment.RandomSizedCrop(min_max_height=(480, 600), height=512, width=512)])
         image_raw = tf.io.read_file(image_file)
         image = tf.image.decode_jpeg(image_raw, channels=3)
         data = {'image': image.numpy()}
-        if training:
-            image = transform(**data)['image']
+        image = transform(**data)['image']
         image = tf.cast(image, tf.float32)
         tensor = image / 127.5 - 1.
         return tensor
