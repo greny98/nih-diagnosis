@@ -87,14 +87,17 @@ if __name__ == '__main__':
         # reset metrics state
         training_loss_mean.reset_states()
         validate_loss_mean.reset_states()
+        min_size = 360
+        unit = int((512 - min_size) / 4)
         # training
         start = time.time()
         for step, (images, labels) in enumerate(train_ds):
-            width, height = tf.random.uniform(shape=(2,), minval=480, maxval=640, dtype=tf.int32).numpy()
+            width, height = tf.random.uniform(shape=(2,), minval=0, maxval=5, dtype=tf.int32).numpy() * unit + min_size
+            print(width, height)
             images_random_size = tf.image.resize(images, size=(width, height))
             training_loss = training_steps(images_random_size, labels)
             training_loss_mean(training_loss)
-            if step % 5000 == 0:
+            if step % 2000 == 0:
                 print(f"Step {step + 1}:", training_loss_mean.result().numpy())
         print("Train time:", time.time() - start)
         # validate
